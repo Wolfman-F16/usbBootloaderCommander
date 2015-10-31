@@ -12,6 +12,9 @@
 
 #include "cbootloader.h"
 
+usb_dev_handle *verifyCorrectDevice(struct usb_device *dev);
+
+
 static int usbGetStringAscii(usb_dev_handle *dev, int index, int langid,
         char *buf, int buflen) {
     char buffer[256];
@@ -43,35 +46,54 @@ static int usbGetStringAscii(usb_dev_handle *dev, int index, int langid,
  * RemoteSensor reference implementation.
  */
 static usb_dev_handle *findDevice(void) {
-    unsigned int i;
+    unsigned int i,ctrBus = 0,ctrDev = 0;
     struct usb_bus *bus = 0;
     struct usb_device *dev = 0;
-    struct usb_device_descriptor descriptor;
     usb_dev_handle *handle = 0;
+    int result;
     unsigned int err;
-    struct usb_device **devList;
-    ssize_t size;
-    int retVal;
-    char buffer[122];
-    unsigned char busId, portId;
+    struct usb_device *devList;
 
     fprintf(stdout, "retrieving device list...\r\n");
-    size = usb_find_busses();
-    fprintf(stdout, "USB busses found: %d\r\n", (int) size);
-
-    for (i = 0; i < size; i++) {
-    	bus = usb_get_busses();
+    result = usb_find_busses();
+    if(result < 0) {
+        fprintf(stdout, "no USB busses found: %d\r\n", result);
+        return 0;
+    }
+    result = usb_find_devices();
+    if(result < 0) {
+        fprintf(stdout, "no USB devices found: %d\r\n", result);
+        return 0;
+    }
+    fprintf(stdout, "%d USB devices found\r\n", result);
+	bus = usb_get_busses();
+	while(bus) {
+		fprintf(stdout,"searching bus at %s -- %d\r\n",bus->dirname, bus->location);
         dev = bus->devices;
-        if (dev == 0) {
-            fprintf(stderr, "no device found. is null pointer\r\n");
-            break;
-        }
-        busId = i;
+		while(dev) {
+			ctrDev++;
+            fprintf(stdout,"\tsearching device %d\r\n",ctrDev++);
+			handle = verifyCorrectDevice(dev);
+            if(handle) 
+               return handle;
+            dev = dev->next;
+		}
+        bus = bus->next;
+    }
+    fprintf(stderr, "no busses found. is null pointer (%d)\r\n", ctrDev);
+	return handle;
+}
 
-        descriptor = dev->descriptor;
-        fprintf(stdout,
-                "found on bus %d for vid %04x and pid %04x ",
-                busId, descriptor.idVendor, descriptor.idProduct);
+usb_dev_handle *verifyCorrectDevice(struct usb_device *dev) {
+    usb_dev_handle *handle = 0;
+    char buffer[122];
+    unsigned char busId, portId;
+    int retVal;
+    struct usb_device_descriptor descriptor;
+
+	fprintf(stdout,
+		"found on bus %d for vid %04x and pid %04x ",
+		busId, descriptor.idVendor, descriptor.idProduct);
 
         if (descriptor.idVendor == USBDEV_SHARED_VENDOR
                 && descriptor.idProduct == USBDEV_SHARED_PRODUCT) {
@@ -81,7 +103,7 @@ static usb_dev_handle *findDevice(void) {
             if (!handle) {
                 fprintf(stderr, "Warning: cannot open USB device: %s\n",
                 		usb_strerror());
-                continue;
+                return handle;
             }
 
             len = usbGetStringAscii(handle, descriptor.iManufacturer, 0x0409,
@@ -105,7 +127,7 @@ static usb_dev_handle *findDevice(void) {
             }
             //  fprintf(stderr, "seen product ->%s<-\n", string);
             if (strcmp(string, "AVRUSBBoot") == 0)
-                break;
+                return handle;
             skipDevice: usb_close(handle);
             handle = NULL;
         } else {
@@ -113,19 +135,17 @@ static usb_dev_handle *findDevice(void) {
             if (!handle) {
                 fprintf(stderr, "Warning: cannot open USB device: %s\n",
                 		usb_strerror());
-                continue;
+                return handle;
             }
             retVal = usb_get_string_simple(handle,
-                    descriptor.iProduct, buffer,(size_t) 122);
+                    descriptor.iProduct, buffer, (size_t)122);
             fprintf(stdout, " %s\r\n", buffer);
             usb_close(handle);
             handle = 0;
         }
         if (handle) {
-            break;
+            return handle;
         }
-        devList++;
-    }
 
     if (!handle)
         fprintf(stderr, "Could not find USB device www.fischl.de/AVRUSBBoot\n");
@@ -191,7 +211,7 @@ void CBootloader::writePage(CPage* page) {
     nBytes = usb_control_msg(usbhandle,
     		USB_TYPE_VENDOR | USB_RECIP_DEVICE
                     | USB_ENDPOINT_OUT, 2, page->getPageaddress(), 0,
-            (char*) page->getData(), page->getPagesize(), (int)5000);
+            (char*) page->getData(), page->getPagesize(), 5000);
 
     if (nBytes != page->getPagesize()) {
         fprintf(stderr, "Error: wrong byte count in writePage: %d !\n", nBytes);
