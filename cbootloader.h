@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "lusb0_usb.h"
+#include "libusb.h"
 #include "cpage.h"
 
 #define USBDEV_SHARED_VENDOR    0x16C0  /* VOTI */
@@ -27,6 +27,7 @@ class CBootloader {
   void startApplication();
 
  protected:
-  usb_dev_handle *usbhandle;
+  libusb_device_handle *usbhandle;
+  libusb_context *ctx;
 };
 

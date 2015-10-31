@@ -1,6 +1,7 @@
 LIBUSB_CONFIG   = libusb-config
 CFLAGS+=-g -Wall -pedantic `$(LIBUSB_CONFIG) --cflags`
-LFLAGS+=`$(LIBUSB_CONFIG) --libs` -lusb -L./
+CFLAGS+=-L./
+LFLAGS+=`$(LIBUSB_CONFIG) --libs` -lusb-1.0
 
 all:
 	make avrusbboot
