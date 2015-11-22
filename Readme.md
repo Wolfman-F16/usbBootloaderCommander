@@ -17,12 +17,12 @@ Note that the microcontroller has to be attached and in bootloader mode during d
 
 ## Usage
 
-    usbBootloaderCommander firmware.hex
+    avrusbboot.exe firmware.hex
 
 ## Tests
 
 The device looks for an USB device *AVRUSBBoot* with VID / PID : 0x16c0/0x5dc.
-To test communication with bootloader, just run `usbBooloaderCommander notexistingfile.hex`.
+To test communication with bootloader, just run `avrusbboot notexistingfile.hex`.
 If the error is *file could not be opened* instead of *device not found*, then communication works.
 
 ## Contributors
