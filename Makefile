@@ -11,4 +11,4 @@ clean:
 	rm avrusbboot
 
 avrusbboot: main.cpp cflashmem.o cpage.o cbootloader.o
-	g++ $(CFLAGS) main.cpp cflashmem.o cpage.o cbootloader.o -o avrusbboot $(LFLAGS)
+	g++ $(CFLAGS) main.cpp cflashmem.o cpage.o cbootloader.o -o bin/avrusbboot $(LFLAGS)
